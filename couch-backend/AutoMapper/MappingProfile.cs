@@ -11,6 +11,16 @@ namespace couch_backend.AutoMapper
         public MappingProfile()
         {
             // Account Controller
+            CreateMap<SocialLoginDTO, User>()
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(
+                    src => src.Email))
+                .ForMember(dest => dest.EmailConfirmed, opt => opt.MapFrom(
+                    src => true))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(
+                    src => src.Email))
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) =>
+                    srcMember != null));
+
             CreateMap<User, LoginResponseDTO>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(
                     src => src.Name));
@@ -23,7 +33,7 @@ namespace couch_backend.AutoMapper
                 .ForMember(dest => dest.ExpiryTime, opt => opt.MapFrom(
                     src => DateTime.UtcNow.AddDays(30)));
 
-            CreateMap<UserRegisterDTO, User>()
+            CreateMap<UserSignUpDTO, User>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(
                     src => src.Email))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(

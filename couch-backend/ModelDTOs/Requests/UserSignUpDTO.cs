@@ -2,7 +2,7 @@
 
 namespace couch_backend.ModelDTOs.Requests
 {
-    public class UserRegisterDTO
+    public class UserSignUpDTO
     {
         [Required]
         [EmailAddress]
