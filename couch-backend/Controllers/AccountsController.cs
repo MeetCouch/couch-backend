@@ -232,6 +232,58 @@ namespace couch_backend.Controllers
             return Ok(new DataResponseDTO<string>("Log out successful"));
         }
 
+        ///// <summary>Change Password endpoint</summary>
+        ///// <param name="model"></param>
+        ///// <returns></returns>
+        //[HttpPost("password/change")]
+        //[Authorize]
+        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        //public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
+        //            ModelState));
+        //    }
+
+        //    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+        //    var user = await UserManager.FindByIdAsync(currentUserId);
+        //    if (user == null || user.ShouldDelete)
+        //    {
+        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
+        //            new string[] { "User not found" }));
+        //    }
+
+        //    var result = await UserManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+        //    if (result == null || !result.Succeeded)
+        //    {
+        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+        //            new string[] { "Incorrect password" }));
+        //    }
+
+        //    EmailService.SendPasswordChangedEmail(user.Email,
+        //        $"{user.FirstName} {user.LastName}".Trim());
+
+        //    var newActivity = Mapper.Map<Activity>(model);
+
+        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
+        //    {
+        //        ActivityService.LogActivity(newActivity,
+        //                                    adminUser: user,
+        //                                    user: user);
+        //    }
+        //    else
+        //    {
+        //        ActivityService.LogActivity(newActivity,
+        //                                    user: user);
+        //    }
+
+        //    return Ok(new DataResponseDTO<string>("Password changed successfully"));
+        //}
+
         ///// <summary>Email or phone number confirmation endpoint</summary>
         ///// <remarks>It confirms a user's email or Phone number
         ///// Accepted data are 'email' and 'phone-number' i.e.
@@ -480,64 +532,6 @@ namespace couch_backend.Controllers
         //    }
 
         //    return Ok(new DataResponseDTO<string>(successMessage));
-        //}
-
-        ///// <summary>Change Password endpoint</summary>
-        ///// <remarks>Requires Authorization</remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <returns></returns>
-        //[HttpPost("password/change")]
-        //[Authorize]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
-        //{
-        //    Logger.LogError("ChangePassword method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-        //    var user = await UserManager.FindByIdAsync(currentUserId);
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    var result = await UserManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-        //    if (result == null || !result.Succeeded)
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new string[] { "Incorrect password" }));
-        //    }
-
-        //    EmailService.SendPasswordChangedEmail(user.Email,
-        //        $"{user.FirstName} {user.LastName}".Trim());
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    adminUser: user,
-        //                                    user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>("Password changed successfully"));
         //}
 
         ///// <summary>Forgot password endpoint</summary>
