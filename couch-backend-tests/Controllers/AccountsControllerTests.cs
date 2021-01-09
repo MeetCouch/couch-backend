@@ -140,7 +140,7 @@ namespace couch_backend_tests.Controllers
 
             // Assert
             var badRequestResult = await result as BadRequestObjectResult;
-            Assert.NotNull(badRequestResult);
+            Assert.Null(badRequestResult);
 
             var model = badRequestResult.Value as ModelStateErrorResponseDTO;
             Assert.NotNull(model);
