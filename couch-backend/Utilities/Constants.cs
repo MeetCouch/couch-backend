@@ -2,6 +2,17 @@
 {
     public class Constants
     {
+        // Error Messages
+        public static readonly string EMAIL_REQUIRED_ERROR_MESSAGE = 
+            "The Email field is required.";
+        public static readonly string INVALID_EMAIL_REQUIRED_ERROR_MESSAGE =
+            "The Email field is not a valid e-mail address.";
+        public static readonly string PASSWORD_REQUIRED_ERROR_MESSAGE =
+            "The Password field is required.";
+
+        // Others
+        public static readonly string SAMPLE_EMAIL = "user@example.com";
+
         // Roles
         public const string ADMIN_ROLE = "Admin";
         public const string SUPER_ADMIN_ROLE = "Super Admin";
