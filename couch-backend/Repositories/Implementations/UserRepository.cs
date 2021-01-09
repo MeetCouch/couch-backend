@@ -1,6 +1,7 @@
 ﻿using couch_backend.DbContexts;
 using couch_backend.Models;
 using couch_backend.Repositories.Interfaces;
+using couch_backend.Utilities;
 
 namespace couch_backend.Repositories.Implementations
 {

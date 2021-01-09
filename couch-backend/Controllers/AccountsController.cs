@@ -705,8 +705,31 @@ namespace couch_backend.Controllers
         //    return Ok(new DataResponseDTO<string>("Your password was reset successfully"));
         //}
 
+        private async Task GenerateUserName(User user)
+        {
+            int length = 2;
+            int count = 1;
+            string userName = string.Empty;
+
+            do
+            {
+                if (count % 600 == 0)
+                    length++;
+
+                userName = Helper.GetRandomToken(length);
+                count++;
+            }
+            while (await _userManager.FindByNameAsync(userName) != null);
+
+            _mapper.Map(userName, user);
+
+            await _userManager.UpdateAsync(user);
+        }
+
         private async Task<DataResponseDTO<LoginResponseDTO>> GetJWTToken(User user)
         {
+            await GenerateUserName(user);
+
             var currentTime = DateTime.UtcNow;
             var userRolesTask = _userManager.GetRolesAsync(user);
             var identityOptions = new IdentityOptions();

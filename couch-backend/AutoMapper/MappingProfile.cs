@@ -21,9 +21,17 @@ namespace couch_backend.AutoMapper
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) =>
                     srcMember != null));
 
+            CreateMap<string, User>()
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(
+                    src => src))
+                .ForMember(dest => dest.NormalizedUserName, opt => opt.MapFrom(
+                    src => src.ToUpper()));
+
             CreateMap<User, LoginResponseDTO>()
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(
-                    src => src.Name));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(
+                    src => src.UserName))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(
+                    src => src.Id));
 
             CreateMap<User, RefreshToken>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(
