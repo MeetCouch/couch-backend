@@ -6,6 +6,7 @@ using couch_backend.DbInitializers;
 using couch_backend.Models;
 using couch_backend.Repositories.Implementations;
 using couch_backend.Repositories.Interfaces;
+using couch_backend.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,6 +22,8 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace couch_backend
@@ -123,7 +126,17 @@ namespace couch_backend
             // Swagger
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "couch_backend", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Couch API", Version = "v1" });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Description = "Enter 'Bearer' (without the quotes) followed by space and " +
+                        "the token. e.g 'Bearer 12345abcdef'",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+                c.OperationFilter<AuthResponsesOperationFilter>();
             });
         }
 
@@ -141,7 +154,7 @@ namespace couch_backend
             }
 
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "couch_backend v1"));
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Couch API v1"));
 
             app.UseIpRateLimiting();
 
