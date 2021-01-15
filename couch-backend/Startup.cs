@@ -123,7 +123,7 @@ namespace couch_backend
             // Swagger
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "couch_backend", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Couch API", Version = "v1" });
             });
         }
 
@@ -141,7 +141,7 @@ namespace couch_backend
             }
 
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "couch_backend v1"));
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Couch API v1"));
 
             app.UseIpRateLimiting();
 
