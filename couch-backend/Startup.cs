@@ -86,7 +86,7 @@ namespace couch_backend
             {
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = false;
-                x.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                x.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -149,6 +149,8 @@ namespace couch_backend
 
             app.UseRouting();
 
+            app.UseAuthentication();
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -158,9 +160,7 @@ namespace couch_backend
 
             // Migrate Database
             using (var scope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
-            {
                 scope.ServiceProvider.GetRequiredService<MariaDbContext>().Database.Migrate();
-            }
 
             // Seed Database
             DbInitializer.SeedDatabase(

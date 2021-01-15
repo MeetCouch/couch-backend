@@ -109,11 +109,10 @@ namespace couch_backend.Controllers
 
             if (!validPassword)
                 return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new List<string> { "The username or password is incorrect" }));
+                    new List<string> { "Email or Password is incorrect" }));
 
             return Ok(await GetJWTToken(user));
         }
-
 
         /// <summary>Social Log in endpoint</summary
         /// <param name="model"></param>
@@ -121,7 +120,7 @@ namespace couch_backend.Controllers
         [HttpPost]
         [Route("log-in/social")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ModelStateErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> SocialLogIn([FromBody] SocialLoginDTO model)
         {
@@ -171,7 +170,7 @@ namespace couch_backend.Controllers
         /// <summary>Refresh token endpoint</summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPut]
         [Route("refresh-token")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
@@ -196,20 +195,56 @@ namespace couch_backend.Controllers
 
             if (token == null)
                 return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new string[] { "The token is invalid" }));
+                    new string[] { "RefreshToken is invalid" }));
 
             await _refreshTokenRepository.DeleteAsync(model.RefreshToken);
 
             return Ok(await GetJWTToken(user));
         }
 
-        /// <summary>Log out endpoint</summary>
-        /// <remarks>
-        /// Requires Authorization
-        /// </remarks>
+        /// <summary>Change Password endpoint</summary>
+        /// <remarks>Requires Authorization</remarks>
         /// <param name="model"></param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPut("password/change")]
+        [Authorize]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            if (!model.NewPassword.Equals(model.ConfirmPassword))
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new string[] { "NewPassword and ConfirmPassword do not match. " +
+                        "Enter the same value for both" }));
+
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            var user = await _userManager.FindByIdAsync(currentUserId);
+
+            if (user == null)
+                return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
+                    new string[] { "The user was not found" }));
+
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+            if (result == null || !result.Succeeded)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "CurrentPassword is incorrect. " +
+                        "If forgotten, logout and use the forgot password flow" }));
+
+            return Ok(new DataResponseDTO<string>("Password change successful"));
+        }
+
+        /// <summary>Log out endpoint</summary>
+        /// <remarks>Requires Authorization</remarks>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpDelete]
         [Route("log-out")]
         [Authorize]
         [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
@@ -482,64 +517,6 @@ namespace couch_backend.Controllers
         //    return Ok(new DataResponseDTO<string>(successMessage));
         //}
 
-        ///// <summary>Change Password endpoint</summary>
-        ///// <remarks>Requires Authorization</remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <returns></returns>
-        //[HttpPost("password/change")]
-        //[Authorize]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
-        //{
-        //    Logger.LogError("ChangePassword method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-        //    var user = await UserManager.FindByIdAsync(currentUserId);
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    var result = await UserManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-        //    if (result == null || !result.Succeeded)
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new string[] { "Incorrect password" }));
-        //    }
-
-        //    EmailService.SendPasswordChangedEmail(user.Email,
-        //        $"{user.FirstName} {user.LastName}".Trim());
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    adminUser: user,
-        //                                    user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>("Password changed successfully"));
-        //}
-
         ///// <summary>Forgot password endpoint</summary>
         ///// <remarks>Accepts either email or phone number as username</remarks>
         ///// <response code="200">Success</response>
@@ -737,15 +714,13 @@ namespace couch_backend.Controllers
             var claims = new List<Claim>
             {
                 new Claim(identityOptions.ClaimsIdentity.UserIdClaimType, user.Id.ToString()),
-                new Claim(identityOptions.ClaimsIdentity.UserNameClaimType, user.Name ?? "")
+                new Claim(identityOptions.ClaimsIdentity.EmailClaimType, user.Email)
             };
 
             var userRoles = await userRolesTask;
 
             foreach (var role in userRoles.ToList())
-            {
                 claims.Add(new Claim(identityOptions.ClaimsIdentity.RoleClaimType, role));
-            }
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -764,9 +739,7 @@ namespace couch_backend.Controllers
             var refreshToken = _mapper.Map<RefreshToken>(user);
 
             do
-            {
                 refreshToken.RefreshTokenId = Helper.GetRandomToken(96);
-            }
             while (await _refreshTokenRepository.GetByIDAsync(refreshToken.RefreshTokenId) != null);
 
             await _refreshTokenRepository.InsertAsync(refreshToken);
