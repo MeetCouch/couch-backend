@@ -51,7 +51,6 @@ namespace couch_backend.Controllers
 
         /// <summary>Sign up endpoint</summary>
         /// <param name="model"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("sign-up")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
@@ -88,7 +87,6 @@ namespace couch_backend.Controllers
 
         /// <summary>Log in endpoint</summary>
         /// <param name="model"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("log-in")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
@@ -103,20 +101,20 @@ namespace couch_backend.Controllers
             
             if (user == null)
                 return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new List<string> { "The username or password is incorrect" }));
+                    new List<string> { "The email or password is incorrect" }));
 
-            var validPassword = await _userManager.CheckPasswordAsync(user, model.Password);
+            var validPassword = await _userManager.CheckPasswordAsync(
+                user, model.Password);
 
             if (!validPassword)
                 return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new List<string> { "Email or Password is incorrect" }));
+                    new List<string> { "The email or password is incorrect" }));
 
             return Ok(await GetJWTToken(user));
         }
 
         /// <summary>Social Log in endpoint</summary
         /// <param name="model"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("log-in/social")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
@@ -167,9 +165,194 @@ namespace couch_backend.Controllers
             return Ok(await GetJWTToken(user));
         }
 
-        /// <summary>Refresh token endpoint</summary>
+        /// <summary>Email confirmation endpoint</summary>
         /// <param name="model"></param>
         /// <returns></returns>
+        [HttpPost("confirm/email")]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "Email not found" }));
+
+            IdentityResult result;
+            try
+            {
+                result = await _userManager.ConfirmEmailAsync(user, model.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while confirming user email");
+
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new string[] { Constants.DEFAULT_ERROR_MESSAGE }));
+            }
+
+            if (result != null && result.Succeeded)
+            {
+                user.EmailConfirmed = true;
+
+                await _userManager.UpdateAsync(user);
+
+                //EmailService.SendEmailConfirmedMessage(user.Email);
+            }
+            else
+            {
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new string[] { Constants.DEFAULT_ERROR_MESSAGE }));
+            }
+
+            return Ok(new DataResponseDTO<string>("Your email was confirmed successfully"));
+        }
+
+        /// <summary>Get new email confirmation token endpoint</summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [HttpPost("confirm/email/token")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetNewConfirmationToken(
+            [FromBody] ResendConfirmEmailRequestDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "Email not found" }));
+
+            string emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            //EmailService.SendNewEmailConfirmationToken(user.Email, emailToken);
+
+            return Ok(new DataResponseDTO<string>("A new confirmation token has " +
+                "been sent to your mail"));
+        }
+
+        /// <summary>Forgot password endpoint</summary>
+        /// <param name="model"></param>
+        [HttpPost]
+        [Route("password/forgot")]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ModelStateErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "Email not found" }));
+
+            var passwordResetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            //EmailService.SendForgotPasswordEmail(user.Email, passwordResetToken);
+
+            return Ok(new DataResponseDTO<string>("An email has been sent to you " +
+                "with details of how to reset your password"));
+        }
+
+        /// <summary>Reset Password endpoint</summary>
+        /// <param name="model"></param>
+        [HttpPut]
+        [Route("password/reset")]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "Email not found" }));
+
+            IdentityResult result;
+            try
+            {
+                result = await _userManager.ResetPasswordAsync(
+                    user, model.PasswordResetToken, model.Password);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while reseting password");
+
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new string[] { Constants.DEFAULT_ERROR_MESSAGE }));
+            }
+
+            if (result == null || !result.Succeeded)
+            {
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                   new string[] { "Invalid Token" }));
+            }
+
+            //EmailService.SendPasswordResetEmail(user.Email);
+
+            return Ok(new DataResponseDTO<string>("Your password was reset successfully"));
+        }
+
+        /// <summary>Change Password endpoint</summary>
+        /// <param name="model"></param>
+        [HttpPut("password/change")]
+        [Authorize]
+        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ModelStateErrorResponseDTO(
+                    HttpStatusCode.BadRequest, ModelState));
+
+            if (!model.NewPassword.Equals(model.ConfirmPassword))
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new string[] { "NewPassword and ConfirmPassword do not match. " +
+                        "Enter the same value for both" }));
+
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            var user = await _userManager.FindByIdAsync(currentUserId);
+
+            if (user == null)
+                return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
+                    new string[] { "The user was not found" }));
+
+            var result = await _userManager.ChangePasswordAsync(
+                user, model.CurrentPassword, model.NewPassword);
+
+            if (result == null || !result.Succeeded)
+                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
+                    new List<string> { "CurrentPassword is incorrect. " +
+                        "If forgotten, logout and use the forgot password flow" }));
+
+            return Ok(new DataResponseDTO<string>("Your password was changed successfully"));
+        }
+
+        /// <summary>Refresh token endpoint</summary>
+        /// <param name="model"></param>
         [HttpPut]
         [Route("refresh-token")]
         [ProducesResponseType(typeof(DataResponseDTO<LoginResponseDTO>), StatusCodes.Status200OK)]
@@ -202,48 +385,8 @@ namespace couch_backend.Controllers
             return Ok(await GetJWTToken(user));
         }
 
-        /// <summary>Change Password endpoint</summary>
-        /// <remarks>Requires Authorization</remarks>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        [HttpPut("password/change")]
-        [Authorize]
-        [ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(new ModelStateErrorResponseDTO(
-                    HttpStatusCode.BadRequest, ModelState));
-
-            if (!model.NewPassword.Equals(model.ConfirmPassword))
-                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new string[] { "NewPassword and ConfirmPassword do not match. " +
-                        "Enter the same value for both" }));
-
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-
-            var user = await _userManager.FindByIdAsync(currentUserId);
-
-            if (user == null)
-                return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-                    new string[] { "The user was not found" }));
-
-            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-            if (result == null || !result.Succeeded)
-                return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-                    new List<string> { "CurrentPassword is incorrect. " +
-                        "If forgotten, logout and use the forgot password flow" }));
-
-            return Ok(new DataResponseDTO<string>("Password change successful"));
-        }
-
         /// <summary>Log out endpoint</summary>
-        /// <remarks>Requires Authorization</remarks>
         /// <param name="model"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("log-out")]
         [Authorize]
@@ -266,421 +409,6 @@ namespace couch_backend.Controllers
 
             return Ok(new DataResponseDTO<string>("Log out successful"));
         }
-
-        ///// <summary>Email or phone number confirmation endpoint</summary>
-        ///// <remarks>It confirms a user's email or Phone number
-        ///// Accepted data are 'email' and 'phone-number' i.e.
-        ///// /api/Accounts/Register/Confirm/email
-        ///// /api/Accounts/Register/Confirm/phone-number
-        ///// </remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <param name="data"></param>
-        ///// <returns></returns>
-        //[HttpPost("confirm/{data}")]
-        //[AllowAnonymous]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ConfirmData([FromBody] ConfirmDataDTO model,
-        //                                             [FromRoute] string data)
-        //{
-        //    Logger.LogError("Accounts Controller ConfirmData method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    if (data != OtherConstants.EMAIL && data != OtherConstants.PHONE_NUMBER)
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new List<string> { "Invalid data type. (Must be either email or phone-number" }));
-        //    }
-
-        //    if (string.IsNullOrWhiteSpace(model.Email) && string.IsNullOrWhiteSpace(model.PhoneNumber))
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new string[] { "You are required to provide either email or phone number" }));
-        //    }
-
-        //    ApplicationUser user = null;
-        //    if (data == OtherConstants.EMAIL && !string.IsNullOrWhiteSpace(model.Email))
-        //    {
-        //        user = await UserManager.FindByEmailAsync(model.Email);
-        //    }
-        //    else if (data == OtherConstants.PHONE_NUMBER && !string.IsNullOrWhiteSpace(model.PhoneNumber))
-        //    {
-        //        user = await UserManager.FindByNameAsync(model.PhoneNumber);
-        //    }
-
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    string successMessage = "";
-        //    if (data == OtherConstants.EMAIL)
-        //    {
-        //        IdentityResult result;
-        //        try
-        //        {
-        //            result = await UserManager.ConfirmEmailAsync(user, model.Token);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.LogError(ex, "Error while confirming user data");
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-
-        //        if (result != null && result.Succeeded)
-        //        {
-        //            user.EmailConfirmed = true;
-        //            Helper.CalculateProfileScore(user);
-        //            await UserManager.UpdateAsync(user);
-
-        //            EmailService.SendEmailConfirmedMessage(user.Email,
-        //                $"{user.FirstName} {user.LastName}".Trim());
-
-        //            successMessage = "Email Confirmed Successfully";
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-        //    }
-        //    else if (data == OtherConstants.PHONE_NUMBER)
-        //    {
-        //        bool isSuccess;
-        //        try
-        //        {
-        //            isSuccess = await UserManager.VerifyChangePhoneNumberTokenAsync(user, model.Token, model.PhoneNumber);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.LogError(ex, "Error while confirming user data");
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-
-        //        if (isSuccess)
-        //        {
-        //            user.PhoneNumberConfirmed = true;
-        //            Helper.CalculateProfileScore(user);
-        //            await UserManager.UpdateAsync(user);
-
-        //            successMessage = "Phone number Confirmed Successfully";
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-        //    }
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    adminUser: user,
-        //                                    user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>(successMessage));
-        //}
-
-        ///// <summary>Get new confirmation token endpoint</summary>
-        ///// <remarks>It generates a new confrimation token and sends to the user
-        ///// Accepted data are "email" and "phone-number" i.e.
-        ///// /api/Accounts/Register/Confirm/email/new
-        ///// /api/Accounts/Register/Confirm/phone-number/new
-        ///// </remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <param name="data"></param>
-        ///// <returns></returns>
-        //[HttpPost("confirm/{data}/new")]
-        //[AllowAnonymous]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> GetNewConfirmationToken([FromBody] ResendConfirmEmailPhoneRequestDTO model,
-        //                                                         [FromRoute] string data)
-        //{
-        //    Logger.LogError("Accounts Controller ConfirmDataNew method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    if (data != OtherConstants.EMAIL && data != OtherConstants.PHONE_NUMBER)
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new List<string> { "Invalid data type. (Must be either email or " +
-        //                "phone-number" }));
-        //    }
-
-        //    if (string.IsNullOrWhiteSpace(model.Email) && string.IsNullOrWhiteSpace(model.PhoneNumber))
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new string[] { "You are required to provide either email or " +
-        //                "phone number" }));
-        //    }
-
-        //    ApplicationUser user = null;
-        //    if (data == OtherConstants.EMAIL && !string.IsNullOrWhiteSpace(model.Email))
-        //    {
-        //        user = await UserManager.FindByEmailAsync(model.Email);
-        //    }
-        //    else if (data == OtherConstants.PHONE_NUMBER && !string.IsNullOrWhiteSpace(model.PhoneNumber))
-        //    {
-        //        user = await UserManager.FindByNameAsync(model.PhoneNumber);
-        //    }
-
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    string successMessage = "";
-        //    if (data == OtherConstants.EMAIL)
-        //    {
-        //        try
-        //        {
-        //            var emailToken = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-
-        //            var fullName = $"{user.FirstName} {user.LastName}".Trim();
-
-        //            EmailService.SendNewEmailConfirmationToken(user.Email,
-        //                                                       fullName,
-        //                                                       model.Platform,
-        //                                                       emailToken);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.LogError(ex, "Error while confirming user data");
-
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-
-        //        successMessage = "Check your mailbox for a confirmation token";
-        //    }
-        //    else
-        //    {
-        //        try
-        //        {
-        //            var phoneNumberToken = await UserManager.GenerateChangePhoneNumberTokenAsync(user, user.PhoneNumber);
-        //            // TODO Send sms with token
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.LogError(ex, "Error while confirming user data");
-        //            return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //                new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //        }
-
-        //        successMessage = "Check your phone for a confirmation token";
-        //    }
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    adminUser: user,
-        //                                    user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>(successMessage));
-        //}
-
-        ///// <summary>Forgot password endpoint</summary>
-        ///// <remarks>Accepts either email or phone number as username</remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <returns></returns>
-        //[HttpPost]
-        //[Route("password/forgot")]
-        //[AllowAnonymous]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ModelStateErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO model)
-        //{
-        //    Logger.LogError("ForgotPassword method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    ApplicationUser user;
-        //    string successMessage;
-
-        //    if (RegexUtilities.IsValidEmail(model.UserName))
-        //    {
-        //        user = await UserManager.FindByEmailAsync(model.UserName);
-        //        successMessage = "An email has been sent to you with details " +
-        //            "of how to reset your password";
-        //    }
-        //    else
-        //    {
-        //        user = await UserManager.FindByNameAsync(model.UserName);
-        //        successMessage = "An SMS has been sent to you with details " +
-        //            "of how to reset your password";
-        //    }
-
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    var passwordResetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
-
-        //    if (RegexUtilities.IsValidEmail(model.UserName))
-        //    {
-        //        var fullName = $"{user.FirstName} {user.LastName}".Trim();
-
-        //        EmailService.SendForgotPasswordEmail(user.Email,
-        //                                             fullName,
-        //                                             passwordResetToken,
-        //                                             model.Platform);
-        //    }
-        //    else
-        //    {
-        //        // Send SMS with token
-        //    }
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity, adminUser: user, user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>(successMessage));
-        //}
-
-        ///// <summary>Reset Password endpoint</summary>
-        ///// <remarks>Accepts either email or phone number as username</remarks>
-        ///// <response code="200">Success</response>
-        ///// <response code="400">Bad Request</response>
-        ///// <response code="404">Not Found</response>
-        ///// <param name="model"></param>
-        ///// <returns></returns>
-        //[HttpPost]
-        //[Route("password/reset")]
-        //[AllowAnonymous]
-        //[ProducesResponseType(typeof(DataResponseDTO<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(ErrorResponseDTO), StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
-        //{
-        //    Logger.LogError("ResetPassword method called");
-
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ModelStateErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            ModelState));
-        //    }
-
-        //    ApplicationUser user;
-
-        //    if (RegexUtilities.IsValidEmail(model.UserName))
-        //    {
-        //        user = await UserManager.FindByEmailAsync(model.UserName);
-        //    }
-        //    else
-        //    {
-        //        user = await UserManager.FindByNameAsync(model.UserName);
-        //    }
-
-        //    if (user == null || user.ShouldDelete)
-        //    {
-        //        return NotFound(new ErrorResponseDTO(HttpStatusCode.NotFound,
-        //            new string[] { "User not found" }));
-        //    }
-
-        //    IdentityResult result;
-        //    try
-        //    {
-        //        result = await UserManager.ResetPasswordAsync(user, model.PasswordResetToken, model.Password);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Logger.LogError(ex, "Error while reseting password");
-
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //            new string[] { OtherConstants.DEFAULT_ERROR_MESSAGE }));
-        //    }
-
-        //    if (result == null || !result.Succeeded)
-        //    {
-        //        return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
-        //           new string[] { "Invalid Token" }));
-        //    }
-
-        //    EmailService.SendPasswordResetEmail(user.Email, $"{user.FirstName} {user.LastName}".Trim());
-
-        //    if (user.HasTemporaryPassword)
-        //    {
-        //        UserRepository.FlagPermanentPassword(user);
-        //        try
-        //        {
-        //            UserRepository.Update(user);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.LogError(ex, "Error updating user details");
-        //        }
-        //    }
-
-        //    var newActivity = Mapper.Map<Activity>(model);
-
-        //    if (await UserManager.IsInRoleAsync(user, UserRoleConstants.ADMIN))
-        //    {
-        //        ActivityService.LogActivity(newActivity, adminUser: user, user: user);
-        //    }
-        //    else
-        //    {
-        //        ActivityService.LogActivity(newActivity,
-        //                                    user: user);
-        //    }
-
-        //    return Ok(new DataResponseDTO<string>("Your password was reset successfully"));
-        //}
 
         private async Task GenerateUserName(User user)
         {
