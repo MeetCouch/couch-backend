@@ -12,6 +12,7 @@
 
         // Others
         public static readonly string SAMPLE_EMAIL = "user@example.com";
+        public static readonly string SITE_URL = "https://meetcouch.com/";
 
         // Roles
         public const string ADMIN_ROLE = "Admin";

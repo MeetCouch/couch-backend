@@ -3,6 +3,7 @@ using couch_backend.ModelDTOs.Requests;
 using couch_backend.ModelDTOs.Responses;
 using couch_backend.Models;
 using couch_backend.Repositories.Interfaces;
+using couch_backend.Services.Interfaces;
 using couch_backend.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +28,7 @@ namespace couch_backend.Controllers
     public class AccountsController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
         private readonly ILogger<AccountsController> _logger;
         private IMapper _mapper { get; }
         private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -35,6 +37,7 @@ namespace couch_backend.Controllers
 
         public AccountsController(
             IConfiguration configuration,
+            IEmailService emailService,
             ILogger<AccountsController> logger,
             IMapper mapper,
             IRefreshTokenRepository refreshTokenRepository,
@@ -42,6 +45,7 @@ namespace couch_backend.Controllers
             IUserRepository userRepository)
         {
             _configuration = configuration;
+            _emailService = emailService;
             _logger = logger;
             _mapper = mapper;
             _refreshTokenRepository = refreshTokenRepository;
@@ -80,6 +84,19 @@ namespace couch_backend.Controllers
 
                 return BadRequest(new ErrorResponseDTO(HttpStatusCode.BadRequest,
                     new string[] { Constants.DEFAULT_ERROR_MESSAGE }));
+            }
+
+            try
+            {
+                var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+                _emailService.SendSuccessfulRegistrationMessage(
+                    user.Email,
+                    emailToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending successful registration email");
             }
 
             return Ok(await GetJWTToken(user));
