@@ -6,6 +6,8 @@ using couch_backend.DbInitializers;
 using couch_backend.Models;
 using couch_backend.Repositories.Implementations;
 using couch_backend.Repositories.Interfaces;
+using couch_backend.Services.Implementations;
+using couch_backend.Services.Interfaces;
 using couch_backend.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -22,8 +24,6 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace couch_backend
@@ -121,7 +121,11 @@ namespace couch_backend
 
             // Repositories
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+
+            // Services
+            services.AddScoped<IEmailService, EmailService>();
 
             // Swagger
             services.AddSwaggerGen(c =>

@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit" Version="3.2.2" />
     <PackageReference Include="AutoMapper" Version="10.1.1" />
+    <PackageReference Include="MailChimp.Net.V3" Version="5.1.0" />
+    <PackageReference Include="Mandrill.net" Version="7.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.1" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.1" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.1" />

@@ -4,6 +4,7 @@ using couch_backend.Controllers;
 using couch_backend.ModelDTOs.Requests;
 using couch_backend.ModelDTOs.Responses;
 using couch_backend.Models;
+using couch_backend.Services.Interfaces;
 using couch_backend.Utilities;
 using couch_backend_tests.MockRepositories;
 using couch_backend_tests.Utilities;
@@ -77,6 +78,7 @@ namespace couch_backend_tests.Controllers
             _mapper = _mockMapper.CreateMapper();
 
             var mockConfiguration = new Mock<IConfiguration>();
+            var mockEmailService = new Mock<IEmailService>();
             var mockLogger = new Mock<ILogger<AccountsController>>();
 
             _refreshTokens = new List<RefreshToken> { _testRefreshToken };
@@ -84,6 +86,7 @@ namespace couch_backend_tests.Controllers
 
             _controller = new AccountsController(
                 mockConfiguration.Object,
+                mockEmailService.Object,
                 mockLogger.Object,
                 _mapper,
                 mockRefreshTokenRepository,

@@ -10,6 +10,7 @@ namespace couch_backend.DbContexts
     {
         public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
         public virtual DbSet<Role> Roles { get; set; }
+        public virtual DbSet<Subscription> Subscriptions { get; set; }
         public virtual DbSet<IdentityUserLogin<Guid>> UserLogins { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
@@ -29,6 +30,13 @@ namespace couch_backend.DbContexts
             modelBuilder.Entity<IdentityUserRole<Guid>>()
                 .ToTable("UserRoles")
                 .HasKey(x => new { x.UserId, x.RoleId });
+
+            modelBuilder.Entity<Subscription>()
+                .HasKey(bc => new { bc.Email });
+
+            modelBuilder.Entity<Subscription>()
+                .HasIndex(bc => new { bc.Email })
+                .IsUnique();
 
             modelBuilder.Entity<User>()
                 .HasIndex(bc => new { bc.UserName })
