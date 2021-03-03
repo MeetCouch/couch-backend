@@ -157,7 +157,10 @@ namespace couch_backend
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseCors(options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
             app.UseSwagger();
+
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Couch API v1"));
 
             app.UseIpRateLimiting();
