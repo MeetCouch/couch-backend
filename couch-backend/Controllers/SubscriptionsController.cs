@@ -62,7 +62,7 @@ namespace couch_backend.Controllers
                 _logger.LogError(ex, "Error while recording email for coming soon");
             }
 
-            return Ok(new DataResponseDTO<string>("Thanks, we will be in touch."));
+            return Ok(new DataResponseDTO<string>("Email received, we will be in touch."));
         }
     }
 }
