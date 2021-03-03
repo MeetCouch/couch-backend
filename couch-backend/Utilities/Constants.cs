@@ -20,5 +20,8 @@
         public const string USER_ROLE = "User";
         public const string DEFAULT_ERROR_MESSAGE = "Could not complete request. " +
             "Please retry later, or contact the support team";
+
+        // Subscriptions
+        public static string COMING_SOON = "Coming soon";
     }
 }

@@ -2,6 +2,7 @@
 using couch_backend.ModelDTOs.Requests;
 using couch_backend.ModelDTOs.Responses;
 using couch_backend.Models;
+using couch_backend.Utilities;
 using System;
 
 namespace couch_backend.AutoMapper
@@ -46,6 +47,14 @@ namespace couch_backend.AutoMapper
                     src => src.Email))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(
                     src => src.Email));
+
+            // Subscriptions Controller
+            CreateMap<ComingSoonDTO, Subscription>()
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(
+                    src => src.Email))
+                .ForMember(dest => dest.Service, opt => opt.MapFrom(
+                    src => Constants.COMING_SOON));
+
         }
     }
 }

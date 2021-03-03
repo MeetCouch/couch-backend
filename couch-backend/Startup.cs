@@ -24,8 +24,6 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace couch_backend
@@ -123,6 +121,7 @@ namespace couch_backend
 
             // Repositories
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
 
             // Services
