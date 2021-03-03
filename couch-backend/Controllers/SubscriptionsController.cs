@@ -49,7 +49,7 @@ namespace couch_backend.Controllers
             ).Result.FirstOrDefault();
 
             if (email != null)
-                return Ok(new DataResponseDTO<string>("Thanks, we will be in touch."));
+                return Ok(new DataResponseDTO<string>("Email received, we will be in touch."));
 
             var subscription = _mapper.Map<Subscription>(model);
 
